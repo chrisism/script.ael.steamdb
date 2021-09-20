@@ -1,6 +1,6 @@
 ﻿# -*- coding: utf-8 -*-
 #
-# SteamDB Scraper for AEL
+# SteamGrid DB Scraper for AEL
 #
 # --- Python standard library ---
 from __future__ import unicode_literals
@@ -20,7 +20,7 @@ from ael.utils import kodilogging, io, kodi
 from ael.scrapers import ScraperSettings, ScrapeStrategy
 
 # Local modules
-from resources.lib.scraper import SteamDb
+from resources.lib.scraper import SteamGridDB
 
 kodilogging.config() 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ addon_version   = addon.getAddonInfo('version')
 # ---------------------------------------------------------------------------------------------
 def run_plugin():
     # --- Some debug stuff for development ---
-    logger.info('------------ Called Advanced Emulator Launcher Plugin: MobyGames Scraper ------------')
+    logger.info('------------ Called Advanced Emulator Launcher Plugin: SteamGrid DB Scraper ------------')
     logger.info('addon.id         "{}"'.format(addon_id))
     logger.info('addon.version    "{}"'.format(addon_version))
     logger.info('sys.platform     "{}"'.format(sys.platform))
@@ -45,7 +45,7 @@ def run_plugin():
     if io.is_linux():   logger.info('OS               "Linux"')
     for i in range(len(sys.argv)): logger.info('sys.argv[{}] "{}"'.format(i, sys.argv[i]))
     
-    parser = argparse.ArgumentParser(prog='script.ael.mobygames')
+    parser = argparse.ArgumentParser(prog='script.ael.steamdb')
     parser.add_argument('--cmd', help="Command to execute", choices=['launch', 'scan', 'scrape', 'configure'])
     parser.add_argument('--type',help="Plugin type", choices=['LAUNCHER', 'SCANNER', 'SCRAPER'], default=constants.AddonType.LAUNCHER.name)
     parser.add_argument('--server_host', type=str, help="Host")
@@ -66,7 +66,7 @@ def run_plugin():
     else:
         kodi.dialog_OK(text=parser.format_help())
         
-    logger.debug('Advanced Emulator Launcher Plugin: MobyGames Scraper -> exit')
+    logger.debug('Advanced Emulator Launcher Plugin: SteamGrid DB Scraper -> exit')
 
 # ---------------------------------------------------------------------------------------------
 # Scraper methods.
@@ -80,7 +80,7 @@ def run_scraper(args):
                             args.server_host, 
                             args.server_port, 
                             settings, 
-                            MobyGames(), 
+                            SteamGridDB(), 
                             pdialog)
                         
     if args.rom_id is not None:
