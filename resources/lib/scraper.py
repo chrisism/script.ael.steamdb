@@ -19,15 +19,15 @@ from __future__ import division
 
 import logging
 import json
-import re
 from datetime import datetime, timedelta
 
 from urllib.parse import quote_plus
 
 # --- AEL packages ---
-from ael import constants, platforms, settings
-from ael.utils import io, net, kodi, text
+from ael import constants, settings
+from ael.utils import io, net, kodi
 from ael.scrapers import Scraper
+from ael.api import ROMObj
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,7 @@ class SteamGridDB(Scraper):
     def __init__(self):
         # --- This scraper settings ---
         self.api_key = settings.getSetting('scraper_steamgriddb_apikey')
+        
         # --- Misc stuff ---
         self.cache_candidates = {}
         self.cache_metadata = {}
@@ -92,6 +93,7 @@ class SteamGridDB(Scraper):
     def check_before_scraping(self, status_dic):
         if self.api_key:
             logger.error('SteamGridDB.check_before_scraping() SteamGridDB API key looks OK.')
+            self.scraper_disabled = False
             return
         logger.error('SteamGridDB.check_before_scraping() SteamGridDB API key not configured.')
         logger.error('SteamGridDB.check_before_scraping() Disabling SteamGridDB scraper.')
@@ -104,7 +106,7 @@ class SteamGridDB(Scraper):
             'and introduce the API key in AEL addon settings.'
         )
 
-    def get_candidates(self, search_term:str, rom_FN:io.FileName, rom_checksums_FN, platform, status_dic):
+    def get_candidates(self, search_term:str, rom:ROMObj, platform, status_dic):
         # --- If scraper is disabled return immediately and silently ---    
         if self.scraper_disabled:
             # If the scraper is disabled return None and do not mark error in status_dic.
@@ -112,11 +114,8 @@ class SteamGridDB(Scraper):
             return None
 
         # Prepare data for scraping.
-        rombase_noext = rom_FN.getBaseNoExt()
-
         # --- Request is not cached. Get candidates and introduce in the cache ---
         logger.debug('SteamGridDB.get_candidates() search_term          "{0}"'.format(search_term))
-        logger.debug('SteamGridDB.get_candidates() rombase_noext        "{0}"'.format(rombase_noext))
         logger.debug('SteamGridDB.get_candidates() AEL platform         "{0}"'.format(platform))
         candidate_list = self._search_candidates(search_term, platform, status_dic)
         if not status_dic['status']: return None
