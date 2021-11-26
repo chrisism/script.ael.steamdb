@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Advanced Emulator Launcher scraping engine for SteamGrid DB.
+# Advanced Kodi Launcher scraping engine for SteamGrid DB.
 
 # Copyright (c) 2020-2021 Chrisism
 #
