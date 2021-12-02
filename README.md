@@ -1,2 +1,2 @@
-# script.ael.steamdb
-SteamDB scraper plugin for AEL
+# script.akl.steamdb
+SteamDB scraper plugin for AKL

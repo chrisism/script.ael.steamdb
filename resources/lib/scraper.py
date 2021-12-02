@@ -23,11 +23,11 @@ from datetime import datetime, timedelta
 
 from urllib.parse import quote_plus
 
-# --- AEL packages ---
-from ael import constants, settings
-from ael.utils import io, net, kodi
-from ael.scrapers import Scraper
-from ael.api import ROMObj
+# --- AKL packages ---
+from akl import constants, settings
+from akl.utils import io, net, kodi
+from akl.scrapers import Scraper
+from akl.api import ROMObj
 
 logger = logging.getLogger(__name__)
 
@@ -101,9 +101,9 @@ class SteamGridDB(Scraper):
         status_dic['status'] = False
         status_dic['dialog'] = kodi.KODI_MESSAGE_DIALOG
         status_dic['msg'] = (
-            'AEL requires your SteamGridDB API key. '
+            'AKL requires your SteamGridDB API key. '
             'Visit https://www.steamgriddb.com/api/v2#section/Authentication for directions about how to get your key '
-            'and introduce the API key in AEL addon settings.'
+            'and introduce the API key in AKL addon settings.'
         )
 
     def get_candidates(self, search_term:str, rom:ROMObj, platform, status_dic):
@@ -116,7 +116,7 @@ class SteamGridDB(Scraper):
         # Prepare data for scraping.
         # --- Request is not cached. Get candidates and introduce in the cache ---
         logger.debug('SteamGridDB.get_candidates() search_term          "{0}"'.format(search_term))
-        logger.debug('SteamGridDB.get_candidates() AEL platform         "{0}"'.format(platform))
+        logger.debug('SteamGridDB.get_candidates() AKL platform         "{0}"'.format(platform))
         candidate_list = self._search_candidates(search_term, platform, status_dic)
         if not status_dic['status']: return None
 
