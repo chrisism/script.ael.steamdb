@@ -122,9 +122,37 @@ class SteamGridDB(Scraper):
 
         return candidate_list
 
-    # SteamGridDB does not support metadata
     def get_metadata(self, status_dic):
-        return None
+        # --- If scraper is disabled return immediately and silently ---
+        if self.scraper_disabled:
+            logger.debug('SteamGridDB.get_metadata() Scraper disabled. Returning empty data.')
+            return self._new_gamedata_dic()
+
+        # --- Check if search term is in the cache ---
+        if self._check_disk_cache(Scraper.CACHE_METADATA, self.cache_key):
+            logger.debug('SteamGridDB.get_metadata() Metadata cache hit "{}"'.format(self.cache_key))
+            return self._retrieve_from_disk_cache(Scraper.CACHE_METADATA, self.cache_key)
+
+        # --- Request is not cached. Get candidates and introduce in the cache ---
+        logger.debug('SteamGridDB.get_metadata() Metadata cache miss "{}"'.format(self.cache_key))
+        
+        candidate_id = self.candidate['id']
+        url = f'{SteamGridDB.API_URL}games/id/{candidate_id}'
+        json_data = self._retrieve_URL_as_JSON(url, status_dic)
+        if not status_dic['status']: return None
+        self._dump_json_debug('SteamGridDB_get_metadata.json', json_data)
+
+        # --- Parse game page data ---
+        gamedata = self._new_gamedata_dic()
+        gamedata['title']       = self._parse_metadata_title(json_data)
+        gamedata['year']        = self._parse_metadata_year(json_data)
+
+        # --- Put metadata in the cache ---
+        logger.debug('SteamGridDB.get_metadata() Adding to metadata cache "{0}"'.format(self.cache_key))
+        self._update_disk_cache(Scraper.CACHE_METADATA, self.cache_key, gamedata)
+
+        return gamedata
+
     
     # This function may be called many times in the ROM Scanner. All calls to this function
     # must be cached. See comments for this function in the Scraper abstract class.
@@ -199,6 +227,19 @@ class SteamGridDB(Scraper):
         candidate_list.sort(key = lambda result: result['order'], reverse = True)
 
         return candidate_list
+
+    def _parse_metadata_title(self, json_data):
+        title_str = json_data['data']['name'] if 'name' in json_data['data'] else constants.DEFAULT_META_TITLE
+        return title_str
+
+    def _parse_metadata_year(self, json_data):
+        if not 'release_date' in json_data['data']: return None
+
+        release_dt = json_data['data']['release_date']
+        if release_dt == '': return None
+
+        dt_object = datetime.fromtimestamp(float(release_dt))
+        return dt_object.year
 
     # Get ALL available assets for game.
     # Cache all assets in the internal disk cache.

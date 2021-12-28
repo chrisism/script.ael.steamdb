@@ -133,3 +133,4 @@ node_modules/
 .vscode/
 .addon
 .pytest_cache/
+tests/output/
