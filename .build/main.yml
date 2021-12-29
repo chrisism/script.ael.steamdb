@@ -31,7 +31,7 @@ variables:
   isHotfix: ${{startsWith(variables['Build.SourceBranch'], 'refs/heads/hotfix/')}}
   isDev: ${{eq(variables['Build.SourceBranch'], 'refs/heads/dev')}}
   workingDirectory: '$(Build.SourcesDirectory)'
-  addonName: script.akl.steamdb
+  addonName: script.akl.steamgriddb
 
 stages:
 - stage: Build
