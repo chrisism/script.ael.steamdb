@@ -66,7 +66,7 @@ class SteamGridDB(Scraper):
         self.cache_assets = {}
         self.all_asset_cache = {}
 
-        cache_dir = settings.getSetting('scraper_cache_dir')
+        cache_dir = settings.getSettingAsFilePath('scraper_cache_dir')
         # --- Pass down common scraper settings ---
         super(SteamGridDB, self).__init__(cache_dir)
 

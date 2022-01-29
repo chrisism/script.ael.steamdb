@@ -6,6 +6,9 @@
 
 # --- Python standard library ---
 from __future__ import unicode_literals
+from __future__ import division
+from __future__ import annotations
+
 import os
 import unittest
 import unittest.mock
@@ -21,13 +24,9 @@ from akl.utils import kodi, io
 from akl.api import ROMObj
 from akl import constants
 
-def get_setting(key:str):
-    if key == 'scraper_cache_dir': return Test_steamdb_metadata_and_assets.TEST_OUTPUT_DIR
-    if key == 'scraper_steamgriddb_apikey': return os.getenv('STEAMDB_APIKEY')   
-    return ''
-
-class Test_steamdb_metadata_and_assets(unittest.TestCase):
+from tests.fakes import FakeFile
     
+class Test_steamdb_metadata_and_assets(unittest.TestCase):
     ROOT_DIR = ''
     TEST_DIR = ''
     TEST_OUTPUT_DIR = ''
@@ -40,21 +39,17 @@ class Test_steamdb_metadata_and_assets(unittest.TestCase):
         cls.TEST_ASSETS_DIR = os.path.abspath(os.path.join(cls.TEST_DIR,'assets/'))
         cls.TEST_OUTPUT_DIR = os.path.abspath(os.path.join(cls.TEST_DIR,'output/'))
                 
-        print('ROOT DIR: {}'.format(cls.ROOT_DIR))
-        print('TEST DIR: {}'.format(cls.TEST_DIR))
-        print('TEST ASSETS DIR: {}'.format(cls.TEST_ASSETS_DIR))
-        print('TEST OUTPUT DIR: {}'.format(cls.TEST_OUTPUT_DIR))
-        print('---------------------------------------------------------------------------')
-
         if not os.path.exists(cls.TEST_OUTPUT_DIR):
             os.makedirs(cls.TEST_OUTPUT_DIR)
     
-    #@unittest.skip('You must have an API key to use this resource')
-    @patch('resources.lib.scraper.settings.getSetting', autospec=True, side_effect=get_setting)
-    def test_steamdb_metadata(self, settings_mock):     
+    @unittest.skip('You must have an API key to use this resource')
+    @patch('akl.settings.getSettingAsFilePath', autospec=True)
+    @patch('resources.lib.scraper.settings.getSetting', autospec=True,return_value= os.getenv('STEAMDB_APIKEY'))
+    def test_steamdb_metadata(self, settings_mock, settings_path_mock):     
+        settings_path_mock.return_value = io.FileName(self.TEST_OUTPUT_DIR,isdir=True)
+
         # --- main ---------------------------------------------------------------------------------------
         print('*** Fetching candidate game list ********************************************************')
-
         # --- Create scraper object ---
         scraper_obj = SteamGridDB()
         scraper_obj.set_verbose_mode(False)
@@ -101,11 +96,13 @@ class Test_steamdb_metadata_and_assets(unittest.TestCase):
         print(metadata)
         scraper_obj.flush_disk_cache()
 
-    #@unittest.skip('You must have an API key to use this resource')
-    @patch('resources.lib.scraper.settings.getSetting', autospec=True, side_effect=get_setting)
-    def test_steamdb_assets(self, settings_mock):                 
+    @unittest.skip('You must have an API key to use this resource')
+    @patch('akl.settings.getSettingAsFilePath', autospec=True)
+    @patch('resources.lib.scraper.settings.getSetting', autospec=True, return_value=os.getenv('STEAMDB_APIKEY'))
+    def test_steamdb_assets(self, settings_mock, settings_path_mock):                 
         # --- main ---------------------------------------------------------------------------------------
         print('*** Fetching candidate game list ********************************************************')
+        settings_path_mock.return_value = io.FileName(self.TEST_OUTPUT_DIR,isdir=True)
 
         # --- Create scraper object ---
         scraper_obj = SteamGridDB()
@@ -125,7 +122,7 @@ class Test_steamdb_metadata_and_assets(unittest.TestCase):
             'platform': platform,
             'assets': {key: '' for key in constants.ROM_ASSET_ID_LIST},
             'asset_paths': {
-                constants.ASSET_TITLE_ID: '/titles/',
+                constants.ASSET_TITLE_ID: f'{self.TEST_OUTPUT_DIR}/titles/',
             }
         })
 
