@@ -347,7 +347,9 @@ class SteamGridDB(Scraper):
     # * When the API key is not configured or invalid SteamGridDB returns HTTP status code 401.
     def _retrieve_URL_as_JSON(self, url, status_dic, retry=0):
         self._wait_for_API_request(100)
-        page_data_raw, http_code = net.get_URL(url, None, {"Authorization": "Bearer {}".format(self.api_key) })
+        page_data, http_code = net.get_URL(url, None, 
+                                            {"Authorization": f"Bearer {self.api_key}"}, 
+                                            content_type=net.ContentType.JSON)
         self.last_http_call = datetime.now()
 
         # --- Check HTTP error codes ---
@@ -377,16 +379,10 @@ class SteamGridDB(Scraper):
             self._handle_error(status_dic, 'Bad HTTP status code {}'.format(http_code))
             return None
         
-        # If page_data_raw is None at this point is because of an exception in net_get_URL()
+        # If page_data is None at this point is because of an exception in net_get_URL()
         # which is not urllib2.HTTPError.
-        if page_data_raw is None:
+        if page_data is None:
             self._handle_error(status_dic, 'Network error/exception in net_get_URL()')
             return None
 
-        # Convert data to JSON.
-        try:
-            return json.loads(page_data_raw)
-        except Exception as ex:
-            logger.error('Error decoding JSON data from SteamGridDB.')
-            self._handle_error(status_dic, 'Error decoding JSON data from SteamGridDB.')
-            return None
+        return page_data
