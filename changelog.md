@@ -1,0 +1,1 @@
+First official release of this Steam Grid DB plugin for AKL.

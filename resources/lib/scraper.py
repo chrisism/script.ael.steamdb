@@ -23,11 +23,11 @@ from datetime import datetime, timedelta
 
 from urllib.parse import quote_plus
 
-# --- AEL packages ---
-from ael import constants, settings
-from ael.utils import io, net, kodi
-from ael.scrapers import Scraper
-from ael.api import ROMObj
+# --- AKL packages ---
+from akl import constants, settings
+from akl.utils import io, net, kodi
+from akl.scrapers import Scraper
+from akl.api import ROMObj
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ class SteamGridDB(Scraper):
         self.cache_assets = {}
         self.all_asset_cache = {}
 
-        cache_dir = settings.getSetting('scraper_cache_dir')
+        cache_dir = settings.getSettingAsFilePath('scraper_cache_dir')
         # --- Pass down common scraper settings ---
         super(SteamGridDB, self).__init__(cache_dir)
 
@@ -101,9 +101,9 @@ class SteamGridDB(Scraper):
         status_dic['status'] = False
         status_dic['dialog'] = kodi.KODI_MESSAGE_DIALOG
         status_dic['msg'] = (
-            'AEL requires your SteamGridDB API key. '
+            'AKL requires your SteamGridDB API key. '
             'Visit https://www.steamgriddb.com/api/v2#section/Authentication for directions about how to get your key '
-            'and introduce the API key in AEL addon settings.'
+            'and introduce the API key in AKL addon settings.'
         )
 
     def get_candidates(self, search_term:str, rom:ROMObj, platform, status_dic):
@@ -116,15 +116,43 @@ class SteamGridDB(Scraper):
         # Prepare data for scraping.
         # --- Request is not cached. Get candidates and introduce in the cache ---
         logger.debug('SteamGridDB.get_candidates() search_term          "{0}"'.format(search_term))
-        logger.debug('SteamGridDB.get_candidates() AEL platform         "{0}"'.format(platform))
+        logger.debug('SteamGridDB.get_candidates() AKL platform         "{0}"'.format(platform))
         candidate_list = self._search_candidates(search_term, platform, status_dic)
         if not status_dic['status']: return None
 
         return candidate_list
 
-    # SteamGridDB does not support metadata
     def get_metadata(self, status_dic):
-        return None
+        # --- If scraper is disabled return immediately and silently ---
+        if self.scraper_disabled:
+            logger.debug('SteamGridDB.get_metadata() Scraper disabled. Returning empty data.')
+            return self._new_gamedata_dic()
+
+        # --- Check if search term is in the cache ---
+        if self._check_disk_cache(Scraper.CACHE_METADATA, self.cache_key):
+            logger.debug('SteamGridDB.get_metadata() Metadata cache hit "{}"'.format(self.cache_key))
+            return self._retrieve_from_disk_cache(Scraper.CACHE_METADATA, self.cache_key)
+
+        # --- Request is not cached. Get candidates and introduce in the cache ---
+        logger.debug('SteamGridDB.get_metadata() Metadata cache miss "{}"'.format(self.cache_key))
+        
+        candidate_id = self.candidate['id']
+        url = f'{SteamGridDB.API_URL}games/id/{candidate_id}'
+        json_data = self._retrieve_URL_as_JSON(url, status_dic)
+        if not status_dic['status']: return None
+        self._dump_json_debug('SteamGridDB_get_metadata.json', json_data)
+
+        # --- Parse game page data ---
+        gamedata = self._new_gamedata_dic()
+        gamedata['title']       = self._parse_metadata_title(json_data)
+        gamedata['year']        = self._parse_metadata_year(json_data)
+
+        # --- Put metadata in the cache ---
+        logger.debug('SteamGridDB.get_metadata() Adding to metadata cache "{0}"'.format(self.cache_key))
+        self._update_disk_cache(Scraper.CACHE_METADATA, self.cache_key, gamedata)
+
+        return gamedata
+
     
     # This function may be called many times in the ROM Scanner. All calls to this function
     # must be cached. See comments for this function in the Scraper abstract class.
@@ -199,6 +227,19 @@ class SteamGridDB(Scraper):
         candidate_list.sort(key = lambda result: result['order'], reverse = True)
 
         return candidate_list
+
+    def _parse_metadata_title(self, json_data):
+        title_str = json_data['data']['name'] if 'name' in json_data['data'] else constants.DEFAULT_META_TITLE
+        return title_str
+
+    def _parse_metadata_year(self, json_data):
+        if not 'release_date' in json_data['data']: return None
+
+        release_dt = json_data['data']['release_date']
+        if release_dt == '': return None
+
+        dt_object = datetime.fromtimestamp(float(release_dt))
+        return dt_object.year
 
     # Get ALL available assets for game.
     # Cache all assets in the internal disk cache.
@@ -306,7 +347,9 @@ class SteamGridDB(Scraper):
     # * When the API key is not configured or invalid SteamGridDB returns HTTP status code 401.
     def _retrieve_URL_as_JSON(self, url, status_dic, retry=0):
         self._wait_for_API_request(100)
-        page_data_raw, http_code = net.get_URL(url, None, {"Authorization": "Bearer {}".format(self.api_key) })
+        page_data, http_code = net.get_URL(url, None, 
+                                            {"Authorization": f"Bearer {self.api_key}"}, 
+                                            content_type=net.ContentType.JSON)
         self.last_http_call = datetime.now()
 
         # --- Check HTTP error codes ---
@@ -336,16 +379,10 @@ class SteamGridDB(Scraper):
             self._handle_error(status_dic, 'Bad HTTP status code {}'.format(http_code))
             return None
         
-        # If page_data_raw is None at this point is because of an exception in net_get_URL()
+        # If page_data is None at this point is because of an exception in net_get_URL()
         # which is not urllib2.HTTPError.
-        if page_data_raw is None:
+        if page_data is None:
             self._handle_error(status_dic, 'Network error/exception in net_get_URL()')
             return None
 
-        # Convert data to JSON.
-        try:
-            return json.loads(page_data_raw)
-        except Exception as ex:
-            logger.error('Error decoding JSON data from SteamGridDB.')
-            self._handle_error(status_dic, 'Error decoding JSON data from SteamGridDB.')
-            return None
+        return page_data
